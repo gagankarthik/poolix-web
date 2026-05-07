@@ -1,8 +1,9 @@
 import { Calendar, Clock, MapPin, Users } from "lucide-react";
-import type { Ride } from "@/lib/mock";
+import type { Ride } from "@/lib/firestore-types";
 
-function formatTime(iso: string) {
-  const d = new Date(iso);
+function formatTime(ts: Ride["departureTime"]) {
+  if (!ts) return "—";
+  const d = ts.toDate();
   return d.toLocaleString("en-IN", {
     weekday: "short",
     day: "numeric",
@@ -13,73 +14,82 @@ function formatTime(iso: string) {
   });
 }
 
-function formatDuration(min: number) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+/** Stable per-driver hue so repeat sightings keep the same avatar tint. */
+function hueFromId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+
+function vehicleLine(ride: Ride): string {
+  const parts: string[] = [];
+  if (ride.vehicleModel) parts.push(ride.vehicleModel);
+  else if (ride.vehicleType) parts.push(ride.vehicleType);
+  if (ride.vehicleColor) parts.push(ride.vehicleColor);
+  if (ride.vehicleNumber) parts.push(ride.vehicleNumber);
+  return parts.join(" · ");
 }
 
 export function RideCard({ ride }: { ride: Ride }) {
+  const initial = (ride.driverName || "D").charAt(0).toUpperCase();
+  const hue = hueFromId(ride.driverId || ride.rideId);
+
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-line bg-paper transition hover:border-ink/30 hover:shadow-[0_18px_40px_-22px_rgba(10,15,31,0.25)]">
       <div className="grid grid-cols-[auto_1fr_auto] items-stretch gap-6 p-5">
-        {/* Driver avatar column */}
         <div className="flex flex-col items-center">
           <div
-            className="grid size-14 place-items-center rounded-full font-display text-xl font-semibold text-ink ring-2 ring-lime"
-            style={{ background: `hsl(${ride.driver.avatarHue} 60% 75%)` }}
+            className="grid size-14 place-items-center overflow-hidden rounded-full font-display text-xl font-semibold text-ink ring-2 ring-lime"
+            style={{ background: `hsl(${hue} 60% 75%)` }}
           >
-            {ride.driver.name.charAt(0)}
-          </div>
-          <div className="mt-2 text-center">
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
-              ★ {ride.driver.rating}
-            </div>
-            <div className="font-mono text-[10px] text-ink-muted">
-              {ride.driver.trips} trips
-            </div>
+            {ride.driverPhotoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={ride.driverPhotoUrl}
+                alt={ride.driverName ?? "Driver"}
+                className="size-full object-cover"
+              />
+            ) : (
+              initial
+            )}
           </div>
         </div>
 
-        {/* Route + meta */}
         <div className="min-w-0">
-          <div className="flex items-baseline gap-3">
-            <h3 className="truncate font-display text-2xl font-bold leading-tight">
-              {ride.from} <span className="text-ink-muted">→</span> {ride.to}
-            </h3>
-            {ride.stops?.length ? (
-              <span className="rounded-full bg-cream-soft px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                via {ride.stops.join(", ")}
-              </span>
-            ) : null}
+          <h3 className="truncate font-display text-2xl font-bold leading-tight">
+            {ride.from} <span className="text-ink-muted">→</span> {ride.to}
+          </h3>
+          <div className="mt-1 text-sm text-ink-soft">
+            {ride.driverName || "Driver"}
           </div>
-
-          <div className="mt-1 text-sm text-ink-soft">{ride.driver.name}</div>
 
           <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-ink-soft">
             <span className="inline-flex items-center gap-1.5">
               <Calendar className="size-3.5" strokeWidth={1.75} />
-              {formatTime(ride.departsAt)}
+              {formatTime(ride.departureTime)}
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="size-3.5" strokeWidth={1.75} />
-              {formatDuration(ride.durationMinutes)}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin className="size-3.5" strokeWidth={1.75} />
-              {ride.vehicle}
-            </span>
+            {vehicleLine(ride) && (
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="size-3.5" strokeWidth={1.75} />
+                {vehicleLine(ride)}
+              </span>
+            )}
+            {ride.waypoints && ride.waypoints.length > 0 && (
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="size-3.5" strokeWidth={1.75} />
+                via {ride.waypoints.join(", ")}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Price + seats */}
         <div className="flex flex-col items-end justify-between text-right">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
               per seat
             </div>
             <div className="font-display text-3xl font-bold leading-none">
-              ₹{ride.pricePerSeat}
+              ₹{Math.round(ride.pricePerSeat ?? 0)}
             </div>
           </div>
 
@@ -95,13 +105,12 @@ export function RideCard({ ride }: { ride: Ride }) {
         </div>
       </div>
 
-      {/* Active band */}
       {ride.status === "active" && (
         <div className="flex items-center gap-1.5 border-t border-line/60 bg-cream-soft/60 px-5 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
           <span className="size-1.5 rounded-full bg-lime-deep" />
-          {ride.seatsLeft === 0
+          {(ride.seatsLeft ?? 0) === 0
             ? "Fully booked"
-            : `${ride.seatsLeft} seat${ride.seatsLeft > 1 ? "s" : ""} available`}
+            : `${ride.seatsLeft} seat${(ride.seatsLeft ?? 0) > 1 ? "s" : ""} available`}
         </div>
       )}
     </article>

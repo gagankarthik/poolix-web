@@ -1,33 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { TopBar } from "@/components/app/TopBar";
 import { RideCard } from "@/components/app/RideCard";
-import { upcomingRides } from "@/lib/mock";
+import { useSearchRides, useUpcomingRides } from "@/lib/queries";
 import { ArrowRight, Calendar, MapPin, Users } from "lucide-react";
 
 export default function SearchPage() {
-  const [from, setFrom] = useState("Bengaluru");
-  const [to, setTo] = useState("Mysuru");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [date, setDate] = useState("Today");
   const [seats, setSeats] = useState(1);
 
-  const results = useMemo(() => {
-    return upcomingRides.filter(
-      (r) =>
-        r.from.toLowerCase().includes(from.trim().toLowerCase()) ||
-        r.to.toLowerCase().includes(to.trim().toLowerCase()) ||
-        from.trim() === "" ||
-        to.trim() === ""
-    );
-  }, [from, to]);
+  const searchActive = from.trim() !== "" || to.trim() !== "";
+  const search = useSearchRides(from.trim(), to.trim());
+  const upcoming = useUpcomingRides(20);
+  const list = searchActive ? search.rides : upcoming.rides;
+  const loading = searchActive ? search.loading : upcoming.loading;
+
+  // Filter by seats client-side so the user's preference is respected.
+  const filtered = list.filter((r) => (r.seatsLeft ?? 0) >= seats);
 
   return (
     <>
       <TopBar eyebrow="· Find a ride" title="Where are you headed?" />
 
       <div className="space-y-10 px-10 py-10 scroll-elegant">
-        {/* Search form */}
         <div className="relative overflow-hidden rounded-3xl bg-ink p-1 shadow-[0_24px_60px_-30px_rgba(10,15,31,0.4)]">
           <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] items-center gap-px overflow-hidden rounded-[22px] bg-line">
             <Field
@@ -35,12 +33,14 @@ export default function SearchPage() {
               label="From"
               value={from}
               onChange={setFrom}
+              placeholder="Bengaluru"
             />
             <Field
               icon={<MapPin className="size-4 rotate-180" strokeWidth={1.75} />}
               label="To"
               value={to}
               onChange={setTo}
+              placeholder="Mysuru"
             />
             <Field
               icon={<Calendar className="size-4" strokeWidth={1.75} />}
@@ -56,37 +56,37 @@ export default function SearchPage() {
           </div>
         </div>
 
-        {/* Results */}
         <div>
           <div className="mb-5 flex items-baseline justify-between">
             <h2 className="font-display text-2xl font-semibold tracking-tight">
-              {results.length} ride{results.length === 1 ? "" : "s"}{" "}
+              {loading
+                ? "Loading rides…"
+                : `${filtered.length} ride${filtered.length === 1 ? "" : "s"}`}
               <span className="text-ink-muted">
-                · {from || "anywhere"} → {to || "anywhere"}
+                {searchActive
+                  ? ` · ${from || "anywhere"} → ${to || "anywhere"}`
+                  : " · departing soon"}
               </span>
             </h2>
-            <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-ink-muted">
-              <span>Sort by</span>
-              <select className="rounded-md border border-line bg-paper px-2 py-1 text-ink">
-                <option>Departure time</option>
-                <option>Price (low to high)</option>
-                <option>Driver rating</option>
-              </select>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            {results.map((r) => (
-              <RideCard key={r.id} ride={r} />
-            ))}
-            {results.length === 0 && (
+            {loading
+              ? [0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-40 animate-pulse rounded-2xl border border-line bg-paper/60"
+                  />
+                ))
+              : filtered.map((r) => <RideCard key={r.rideId} ride={r} />)}
+            {!loading && filtered.length === 0 && (
               <div className="col-span-full rounded-2xl border border-dashed border-line bg-paper p-12 text-center">
                 <div className="font-display text-2xl font-semibold">
-                  No rides match those cities yet.
+                  No matching rides today.
                 </div>
                 <p className="mt-2 text-ink-soft">
-                  Try a nearby town, or set up an alert and we&apos;ll ping you
-                  the moment a driver posts a matching trip.
+                  Try a different city pair, fewer seats, or be the first to
+                  publish a ride for this route.
                 </p>
                 <button className="mt-6 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-ink-soft">
                   Create alert <ArrowRight className="size-4" />
@@ -105,12 +105,14 @@ function Field({
   label,
   value,
   onChange,
+  placeholder,
   compact,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
   compact?: boolean;
 }) {
   return (
@@ -126,8 +128,9 @@ function Field({
       <input
         type="text"
         value={value}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-transparent font-display text-xl font-semibold text-ink focus:outline-none"
+        className="bg-transparent font-display text-xl font-semibold text-ink placeholder:text-ink-muted/60 focus:outline-none"
       />
     </label>
   );

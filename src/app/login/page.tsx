@@ -1,12 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 
 export default function LoginPage() {
+  // useSearchParams() forces client-side rendering and needs a Suspense
+  // boundary so Next can defer its hydration during prerendering.
+  return (
+    <Suspense fallback={<div className="grid min-h-screen place-items-center text-ink-muted"><span className="font-mono text-xs uppercase tracking-[0.24em]">One moment…</span></div>}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const { user, loading, signInGoogle, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, phoneStage, phoneError } = useAuth();
   const router = useRouter();
   const params = useSearchParams();

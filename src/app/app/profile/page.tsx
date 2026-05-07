@@ -1,5 +1,8 @@
+"use client";
+
 import { TopBar } from "@/components/app/TopBar";
-import { myProfile } from "@/lib/mock";
+import { useAuth } from "@/lib/auth-context";
+import { useMyProfile, useRatingsReceived } from "@/lib/queries";
 import {
   Phone,
   Mail,
@@ -10,15 +13,73 @@ import {
   Car,
 } from "lucide-react";
 
+function hueFromId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+
 export default function ProfilePage() {
+  const { user } = useAuth();
+  const { profile } = useMyProfile();
+  const { avg, count, ratings } = useRatingsReceived(user?.uid);
+
+  const name = profile?.name || user?.displayName || "Rider";
+  const initial = name.charAt(0).toUpperCase();
+  const hue = user ? hueFromId(user.uid) : 88;
+  const photo = profile?.profilePhoto || user?.photoURL || "";
+
   const verifications = [
-    { key: "phone", label: "Phone number", sub: myProfile.phone, icon: Phone, ok: myProfile.verifications.phone, okCopy: "Verified via OTP" },
-    { key: "email", label: "Email", sub: myProfile.email, icon: Mail, ok: myProfile.verifications.email, okCopy: "On file" },
-    { key: "govId", label: "Government ID", sub: "Aadhaar last 4 · 2024", icon: IdCard, ok: myProfile.verifications.govId, okCopy: "Submitted" },
-    { key: "license", label: "Driving licence", sub: "Required to publish rides", icon: FileBadge2, ok: myProfile.verifications.license, okCopy: "Submitted" },
+    {
+      key: "phone",
+      label: "Phone number",
+      sub: profile?.phone || user?.phoneNumber || "Not added yet",
+      icon: Phone,
+      ok: !!(profile?.phoneVerified || user?.phoneNumber),
+      okCopy: "Verified via OTP",
+    },
+    {
+      key: "email",
+      label: "Email",
+      sub: profile?.email || user?.email || "Not added yet",
+      icon: Mail,
+      ok: !!(profile?.email || user?.email),
+      okCopy: "On file",
+    },
+    {
+      key: "govId",
+      label: "Government ID",
+      sub: profile?.aadhaarNumber
+        ? `Aadhaar ending ${profile.aadhaarNumber.slice(-4)}`
+        : profile?.idDocumentUrl
+        ? "Uploaded"
+        : "Required to publish rides",
+      icon: IdCard,
+      ok: !!(profile?.idDocumentUrl || profile?.aadhaarNumber),
+      okCopy: "Submitted",
+    },
+    {
+      key: "license",
+      label: "Driving licence",
+      sub: profile?.licenseDocumentUrl
+        ? "Uploaded"
+        : "Required to publish rides",
+      icon: FileBadge2,
+      ok: !!profile?.licenseDocumentUrl,
+      okCopy: "Submitted",
+    },
   ];
 
-  const filled = Math.round(myProfile.rating);
+  const filled = Math.round(avg);
+
+  const vehicle =
+    profile?.vehicleModel || profile?.vehicleType
+      ? {
+          model: profile.vehicleModel || profile.vehicleType || "",
+          color: profile.vehicleColor || "",
+          plate: profile.vehicleRcNumber || "",
+        }
+      : null;
 
   return (
     <>
@@ -26,7 +87,6 @@ export default function ProfilePage() {
 
       <div className="flex-1 px-10 py-10 scroll-elegant">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Hero card */}
           <section className="relative overflow-hidden rounded-3xl border border-line bg-paper p-10 lg:col-span-2">
             <div className="absolute -right-24 -top-24 size-72 rounded-full bg-lime/35 blur-3xl" />
             <div className="absolute -bottom-32 -left-20 size-72 rounded-full bg-coral/15 blur-3xl" />
@@ -34,39 +94,52 @@ export default function ProfilePage() {
             <div className="relative flex items-start gap-8">
               <div className="relative">
                 <div
-                  className="grid size-32 place-items-center rounded-full font-display text-5xl font-bold text-ink ring-4 ring-lime ring-offset-4 ring-offset-paper"
-                  style={{
-                    background: `hsl(${myProfile.avatarHue} 50% 75%)`,
-                  }}
+                  className="grid size-32 place-items-center overflow-hidden rounded-full font-display text-5xl font-bold text-ink ring-4 ring-lime ring-offset-4 ring-offset-paper"
+                  style={{ background: `hsl(${hue} 50% 75%)` }}
                 >
-                  {myProfile.name.charAt(0)}
+                  {photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={photo} alt={name} className="size-full object-cover" />
+                  ) : (
+                    initial
+                  )}
                 </div>
-                <span className="absolute -bottom-1 -right-1 grid size-9 place-items-center rounded-full bg-lime text-ink ring-4 ring-paper">
-                  ✓
-                </span>
+                {profile?.verificationStatus === "verified" && (
+                  <span className="absolute -bottom-1 -right-1 grid size-9 place-items-center rounded-full bg-lime text-ink ring-4 ring-paper">
+                    ✓
+                  </span>
+                )}
               </div>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
                   <h2 className="font-display text-5xl font-bold tracking-tight">
-                    {myProfile.name}
+                    {name}
                   </h2>
-                  <button className="grid size-9 place-items-center rounded-full border border-line text-ink-soft transition hover:border-ink hover:text-ink">
+                  <button
+                    aria-label="Edit name"
+                    className="grid size-9 place-items-center rounded-full border border-line text-ink-soft transition hover:border-ink hover:text-ink"
+                  >
                     <Edit2 className="size-4" strokeWidth={1.75} />
                   </button>
                 </div>
 
                 <div className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-ink-muted">
-                  Member since 2026 · {myProfile.tripsAsDriver} trips driven · {myProfile.tripsAsRider} rides taken
+                  {profile?.createdAt
+                    ? `Member since ${profile.createdAt.toDate().getFullYear()}`
+                    : "Member · Poolix"}
+                  {" · "}
+                  {ratings.length} review{ratings.length === 1 ? "" : "s"}
                 </div>
 
-                <p className="mt-4 max-w-md text-ink-soft">{myProfile.bio}</p>
+                {profile?.bio && (
+                  <p className="mt-4 max-w-md text-ink-soft">{profile.bio}</p>
+                )}
 
-                {/* Big rating block */}
                 <div className="mt-8 flex items-end gap-6">
                   <div>
                     <div className="font-display text-6xl font-bold leading-none tracking-tight">
-                      {myProfile.rating.toFixed(1)}
+                      {count > 0 ? avg.toFixed(1) : "—"}
                     </div>
                     <div className="mt-1 flex gap-0.5">
                       {[1, 2, 3, 4, 5].map((i) => (
@@ -87,7 +160,7 @@ export default function ProfilePage() {
                       Based on
                     </div>
                     <div className="font-display text-xl font-semibold">
-                      {myProfile.ratingCount} reviews
+                      {count} review{count === 1 ? "" : "s"}
                     </div>
                   </div>
                 </div>
@@ -95,8 +168,7 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* Vehicle */}
-          {myProfile.vehicle && (
+          {vehicle && (
             <section className="rounded-3xl border border-line bg-paper p-8">
               <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted">
                 · Vehicle on file
@@ -107,24 +179,22 @@ export default function ProfilePage() {
                 </div>
                 <div className="min-w-0">
                   <div className="font-display text-xl font-semibold leading-tight">
-                    {myProfile.vehicle.model}
+                    {vehicle.model}
                   </div>
-                  <div className="text-sm text-ink-soft">
-                    {myProfile.vehicle.color}
-                  </div>
+                  {vehicle.color && (
+                    <div className="text-sm text-ink-soft">{vehicle.color}</div>
+                  )}
                 </div>
               </div>
-              <div className="mt-6 rounded-xl border border-dashed border-line bg-cream-soft px-4 py-3 font-mono text-sm tracking-wider text-ink">
-                {myProfile.vehicle.plate}
-              </div>
-              <button className="mt-6 w-full rounded-xl border border-ink/15 bg-cream-soft py-2.5 text-sm font-medium text-ink-soft transition hover:border-ink/40">
-                Manage vehicles →
-              </button>
+              {vehicle.plate && (
+                <div className="mt-6 rounded-xl border border-dashed border-line bg-cream-soft px-4 py-3 font-mono text-sm tracking-wider text-ink">
+                  {vehicle.plate}
+                </div>
+              )}
             </section>
           )}
         </div>
 
-        {/* Verifications */}
         <section className="mt-10">
           <div className="mb-6">
             <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted">
