@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { HeroSearch } from "@/components/landing/HeroSearch";
 
 export function Hero() {
   return (
@@ -119,14 +120,14 @@ export function Hero() {
           </motion.div>
         </div>
 
-        {/* Right column — animated route ticket */}
+        {/* Right column — interactive search card */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, rotate: -2 }}
-          animate={{ opacity: 1, scale: 1, rotate: -2 }}
-          transition={{ duration: 0.9, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
           className="relative lg:col-span-5"
         >
-          <RouteTicket />
+          <HeroSearch />
         </motion.div>
       </div>
 
@@ -165,120 +166,3 @@ export function Hero() {
   );
 }
 
-function RouteTicket() {
-  return (
-    <div className="relative mx-auto max-w-md">
-      {/* Drop shadow stack */}
-      <div className="absolute inset-0 translate-x-3 translate-y-3 rounded-3xl bg-ink/5" />
-      <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-3xl bg-ink/8" />
-
-      <div className="relative overflow-hidden rounded-3xl border border-ink/10 bg-paper shadow-[0_30px_60px_-24px_rgba(10,15,31,0.25)]">
-        {/* Top header */}
-        <div className="flex items-center justify-between border-b border-dashed border-line px-6 py-4">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-            ride no. 0421
-          </span>
-          <span className="rounded-full bg-lime px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-ink">
-            ✓ Confirmed
-          </span>
-        </div>
-
-        {/* Route */}
-        <div className="px-6 pt-6">
-          <div className="flex items-start gap-4">
-            <div className="mt-2 flex flex-col items-center">
-              <span className="size-3 rounded-full border-2 border-ink bg-lime" />
-              <span className="my-1 h-12 w-px bg-ink" />
-              <span className="size-3 rounded-full bg-coral" />
-            </div>
-            <div className="flex-1">
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                  From
-                </div>
-                <div className="font-display text-2xl font-semibold leading-tight">
-                  Bengaluru
-                </div>
-                <div className="text-xs text-ink-muted">06:00 AM · Mon</div>
-              </div>
-              <div className="mt-5">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                  To
-                </div>
-                <div className="font-display text-2xl font-semibold leading-tight">
-                  Mysuru
-                </div>
-                <div className="text-xs text-ink-muted">~3h 15m · 1 stop</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Driver row */}
-        <div className="mt-6 flex items-center gap-3 border-t border-dashed border-line px-6 py-4">
-          <div
-            className="grid size-10 place-items-center rounded-full font-display font-semibold text-ink"
-            style={{ background: "hsl(142 60% 75%)" }}
-          >
-            A
-          </div>
-          <div className="flex-1">
-            <div className="text-sm font-semibold">Aanya Iyer</div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-              ★ 4.9 · 47 trips · ID verified
-            </div>
-          </div>
-          <button className="rounded-full bg-ink px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cream">
-            Message
-          </button>
-        </div>
-
-        {/* Tear */}
-        <div className="relative h-6 border-t border-dashed border-line">
-          <div className="absolute -left-3 top-1/2 size-6 -translate-y-1/2 rounded-full bg-cream" />
-          <div className="absolute -right-3 top-1/2 size-6 -translate-y-1/2 rounded-full bg-cream" />
-        </div>
-
-        {/* Total */}
-        <div className="flex items-end justify-between px-6 pb-6">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-              Per seat
-            </div>
-            <div className="font-display text-3xl font-bold">
-              ₹380<span className="text-sm font-medium text-ink-muted"> / seat</span>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-              2 / 4 left
-            </div>
-            <div className="mt-1 flex gap-1">
-              {[1, 1, 0, 0].map((s, i) => (
-                <span
-                  key={i}
-                  className={`h-2 w-5 rounded-full ${
-                    s ? "bg-lime" : "bg-line"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Floating annotation */}
-      <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1, duration: 0.6 }}
-        className="drift absolute -bottom-6 -left-8 hidden rotate-[-6deg] rounded-2xl border border-ink/10 bg-cream px-4 py-3 shadow-lg sm:block"
-      >
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-          You save vs Uber
-        </div>
-        <div className="font-display text-2xl font-bold text-coral">−₹620</div>
-      </motion.div>
-    </div>
-  );
-}
