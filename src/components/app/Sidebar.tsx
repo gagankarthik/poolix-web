@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -10,6 +11,8 @@ import {
   MessageCircle,
   User,
   LogOut,
+  Menu,
+  X,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/cn";
@@ -37,6 +40,23 @@ export function Sidebar() {
   const { user, signOut } = useAuth();
   const { profile } = useMyProfile();
   const { chats } = useMyChats();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Auto-close the mobile drawer on route change.
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  // Lock body scroll while the drawer is open.
+  useEffect(() => {
+    if (drawerOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [drawerOpen]);
 
   const inboxUnread = user
     ? chats.reduce((acc, c) => acc + (c.unread?.[user.uid] ?? 0), 0)
@@ -55,8 +75,8 @@ export function Sidebar() {
     router.replace("/");
   }
 
-  return (
-    <aside className="sticky top-0 flex h-screen w-72 shrink-0 flex-col border-r border-line bg-paper/60">
+  const navContent = (
+    <>
       <div className="border-b border-line/60 p-6">
         <Link href="/" className="block">
           <Logo />
@@ -98,7 +118,7 @@ export function Sidebar() {
               )}
               <kbd
                 className={cn(
-                  "hidden font-mono text-[10px] tracking-wide opacity-50 group-hover:inline-block",
+                  "hidden font-mono text-[10px] tracking-wide opacity-50 lg:group-hover:inline-block",
                   active ? "text-cream" : "text-ink-muted"
                 )}
               >
@@ -146,6 +166,52 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar with hamburger — visible only below lg */}
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-paper/90 px-4 py-3 backdrop-blur lg:hidden">
+        <Link href="/" className="block">
+          <Logo />
+        </Link>
+        <button
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Open menu"
+          className="grid size-10 place-items-center rounded-xl border border-line text-ink"
+        >
+          <Menu className="size-5" strokeWidth={1.75} />
+        </button>
+      </div>
+
+      {/* Desktop fixed sidebar — visible only on lg and up */}
+      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-line bg-paper/60 lg:flex">
+        {navContent}
+      </aside>
+
+      {/* Mobile drawer overlay */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            aria-label="Close menu"
+            onClick={() => setDrawerOpen(false)}
+            className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+          />
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-line bg-paper">
+            <div className="flex items-center justify-end border-b border-line/60 px-3 py-2">
+              <button
+                onClick={() => setDrawerOpen(false)}
+                aria-label="Close menu"
+                className="grid size-9 place-items-center rounded-full text-ink-muted transition hover:bg-cream-soft hover:text-ink"
+              >
+                <X className="size-5" strokeWidth={1.75} />
+              </button>
+            </div>
+            {navContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

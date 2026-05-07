@@ -23,7 +23,7 @@ export default function BookingsPage() {
   return (
     <>
       <TopBar eyebrow="· Your trips" title="My bookings" />
-      <div className="px-10 py-10 space-y-4">
+      <div className="space-y-4 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
         {loading && (
           <div className="text-ink-muted font-mono text-xs uppercase tracking-[0.18em]">
             Loading…
@@ -58,7 +58,7 @@ export default function BookingsPage() {
           return (
             <article
               key={b.bookingId}
-              className="grid grid-cols-[auto_1fr_auto] items-center gap-6 rounded-2xl border border-line bg-paper p-6"
+              className="grid grid-cols-[auto_1fr] items-start gap-4 rounded-2xl border border-line bg-paper p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-6 sm:p-6"
             >
               <div
                 className="grid size-12 place-items-center overflow-hidden rounded-full font-display text-xl font-semibold text-ink"

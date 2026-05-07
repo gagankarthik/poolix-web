@@ -32,8 +32,8 @@ export default function DashboardPage() {
         title="Dashboard"
       />
 
-      <div className="flex-1 space-y-12 px-10 py-10 scroll-elegant">
-        <section className="grid grid-cols-3 gap-4">
+      <div className="flex-1 space-y-12 px-4 py-8 sm:px-6 lg:px-10 lg:py-10 scroll-elegant">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Stat
             label="Earnings (collected)"
             value={`₹${earnings.totalEarnings.toLocaleString("en-IN")}`}
@@ -109,8 +109,8 @@ export default function DashboardPage() {
               href="/app/search"
             />
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-line bg-paper">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-2xl border border-line bg-paper">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-cream-soft">
                   <tr className="text-left">
                     {["Route", "Driver", "Seats", "Total", "Status", ""].map(

@@ -4,14 +4,14 @@ import { Bell, Search } from "lucide-react";
 
 export function TopBar({ title, eyebrow }: { title: string; eyebrow?: string }) {
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line/60 bg-cream/85 px-10 py-6 backdrop-blur">
-      <div>
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line/60 bg-cream/85 px-4 py-4 backdrop-blur sm:px-6 lg:px-10 lg:py-6">
+      <div className="min-w-0">
         {eyebrow && (
-          <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted">
+          <div className="truncate font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted">
             {eyebrow}
           </div>
         )}
-        <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">
+        <h1 className="mt-1 truncate font-display text-2xl font-bold tracking-tight sm:text-3xl">
           {title}
         </h1>
       </div>

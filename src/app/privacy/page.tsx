@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
-import { Footer } from "@/components/landing/Footer";
+import { LegalLayout } from "@/components/legal/LegalLayout";
 
 export const metadata = {
   title: "Privacy Policy — Poolix",
@@ -18,7 +17,14 @@ const sections = [
         encrypted on Indian Firebase servers; your live location is read only
         while you have the app open and is never sold; ratings and reviews are
         public so passengers can choose drivers safely. We don&apos;t sell your
-        data, and you can delete your account from inside the app at any time.
+        data, and you can{" "}
+        <Link
+          href="/delete-account"
+          className="underline decoration-coral underline-offset-4"
+        >
+          delete your account
+        </Link>{" "}
+        from inside the app or via this website at any time.
       </>
     ),
   },
@@ -42,8 +48,8 @@ const sections = [
           per seat, vehicle details, and per-passenger pickup/payment status.
         </li>
         <li>
-          <strong>Device data:</strong> FCM token (so we can send notifications),
-          app version, OS version, and Android language. No advertising IDs.
+          <strong>Device data:</strong> FCM token (for notifications), app
+          version, OS version, and Android language. No advertising IDs.
         </li>
         <li>
           <strong>Location:</strong> read while the app is in the foreground to
@@ -95,8 +101,8 @@ const sections = [
       <>
         Active accounts: indefinitely while you continue to use Poolix. Closed
         accounts: most data deleted within 30 days; tax-relevant trip records
-        retained for 7 years per Indian regulation. Your verification documents
-        are deleted within 30 days of account closure unless retained for an
+        retained for 7 years per Indian regulation. Verification documents are
+        deleted within 30 days of account closure unless retained for an
         active dispute.
       </>
     ),
@@ -108,12 +114,31 @@ const sections = [
       <ul className="list-disc space-y-3 pl-5">
         <li>
           Access, correct, or delete your account from{" "}
-          <Link href="/app/profile" className="underline decoration-coral underline-offset-4">
+          <Link
+            href="/app/profile"
+            className="underline decoration-coral underline-offset-4"
+          >
             the profile screen
           </Link>{" "}
-          → Close account.
+          → Close account, or via{" "}
+          <Link
+            href="/delete-account"
+            className="underline decoration-coral underline-offset-4"
+          >
+            our deletion form
+          </Link>
+          .
         </li>
-        <li>Request a copy of your data by emailing privacy@poolix.app.</li>
+        <li>
+          Request a copy of your data by emailing{" "}
+          <a
+            href="mailto:privacy@poolix.app"
+            className="underline decoration-coral underline-offset-4"
+          >
+            privacy@poolix.app
+          </a>
+          .
+        </li>
         <li>Withdraw location consent any time via Android system settings.</li>
         <li>
           Lodge a complaint with India&apos;s Data Protection Board if you
@@ -178,82 +203,19 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
-    <div className="grain min-h-screen">
-      {/* Compact nav */}
-      <header className="border-b border-line/60 bg-cream/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link href="/">
-            <Logo />
-          </Link>
-          <Link
-            href="/"
-            className="font-mono text-xs uppercase tracking-[0.2em] text-ink-muted transition hover:text-ink"
-          >
-            ← Back home
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto grid max-w-5xl grid-cols-1 gap-12 px-6 py-20 lg:grid-cols-12">
-        {/* Sticky table of contents */}
-        <aside className="lg:col-span-3">
-          <div className="sticky top-24">
-            <div className="font-mono text-xs uppercase tracking-[0.24em] text-ink-muted">
-              Sections
-            </div>
-            <nav className="mt-4 space-y-1">
-              {sections.map((s) => (
-                <a
-                  key={s.id}
-                  href={`#${s.id}`}
-                  className="block border-l-2 border-line py-1 pl-3 text-sm text-ink-soft transition hover:border-ink hover:text-ink"
-                >
-                  {s.title.replace(/^\d+ — /, "")}
-                </a>
-              ))}
-            </nav>
-          </div>
-        </aside>
-
-        <article className="lg:col-span-9">
-          {/* Hero */}
-          <div className="border-b border-line/60 pb-12">
-            <div className="font-mono text-xs uppercase tracking-[0.24em] text-ink-muted">
-              · Last updated: 7 May 2026
-            </div>
-            <h1 className="mt-4 font-display text-6xl font-bold leading-[0.95] tracking-tight sm:text-7xl">
-              Privacy
-              <br />
-              <span className="italic font-light">policy.</span>
-            </h1>
-            <p className="mt-8 max-w-2xl text-lg text-ink-soft">
-              The short version is at the top. The detailed version is below
-              it. This document is governed by India&apos;s Information
-              Technology Act, 2000 and the SPDI Rules, 2011.
-            </p>
-          </div>
-
-          {/* Sections */}
-          <div className="space-y-16 pt-16">
-            {sections.map((s) => (
-              <section key={s.id} id={s.id} className="scroll-mt-24">
-                <h2 className="font-display text-3xl font-semibold leading-tight">
-                  {s.title}
-                </h2>
-                <div className="mt-4 max-w-3xl text-ink-soft leading-relaxed">
-                  {s.body}
-                </div>
-              </section>
-            ))}
-          </div>
-
-          <div className="mt-24 border-t border-line/60 pt-8 font-mono text-xs uppercase tracking-[0.18em] text-ink-muted">
-            Made with care in Bengaluru, India · Governed by Indian law
-          </div>
-        </article>
-      </main>
-
-      <Footer />
-    </div>
+    <LegalLayout
+      meta="Privacy policy · Last updated 7 May 2026"
+      titleLeft="Privacy"
+      titleRight="policy."
+      intro={
+        <>
+          The short version is at the top. The detailed version is below it.
+          This document is governed by India&apos;s Information Technology Act,
+          2000 and the SPDI Rules, 2011.
+        </>
+      }
+      sections={sections}
+      closingLine="Made with care in Bengaluru, India · Governed by Indian law"
+    />
   );
 }

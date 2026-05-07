@@ -38,8 +38,8 @@ export function Footer() {
           title="Legal"
           links={[
             ["Privacy policy", "/privacy"],
-            ["Terms of service", "#"],
-            ["Cookies", "#"],
+            ["Terms of service", "/terms"],
+            ["Delete account", "/delete-account"],
             ["Grievance officer", "/privacy#grievance"],
           ]}
         />

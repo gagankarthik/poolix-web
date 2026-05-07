@@ -50,9 +50,9 @@ export default function InboxPage() {
     <>
       <TopBar eyebrow="· Conversations" title="Inbox" />
 
-      <div className="grid flex-1 grid-cols-[24rem_1fr] overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden lg:grid lg:grid-cols-[24rem_1fr]">
         {/* Thread list */}
-        <ul className="border-r border-line scroll-elegant overflow-y-auto">
+        <ul className="scroll-elegant max-h-64 overflow-y-auto border-b border-line lg:max-h-none lg:border-b-0 lg:border-r">
           {loading && (
             <li className="px-6 py-5 font-mono text-xs uppercase tracking-[0.18em] text-ink-muted">
               Loading…

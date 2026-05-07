@@ -85,13 +85,13 @@ export default function ProfilePage() {
     <>
       <TopBar eyebrow="· You" title="Profile" />
 
-      <div className="flex-1 px-10 py-10 scroll-elegant">
+      <div className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:py-10 scroll-elegant">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <section className="relative overflow-hidden rounded-3xl border border-line bg-paper p-10 lg:col-span-2">
+          <section className="relative overflow-hidden rounded-3xl border border-line bg-paper p-6 sm:p-10 lg:col-span-2">
             <div className="absolute -right-24 -top-24 size-72 rounded-full bg-lime/35 blur-3xl" />
             <div className="absolute -bottom-32 -left-20 size-72 rounded-full bg-coral/15 blur-3xl" />
 
-            <div className="relative flex items-start gap-8">
+            <div className="relative flex flex-col items-start gap-6 sm:flex-row sm:gap-8">
               <div className="relative">
                 <div
                   className="grid size-32 place-items-center overflow-hidden rounded-full font-display text-5xl font-bold text-ink ring-4 ring-lime ring-offset-4 ring-offset-paper"
