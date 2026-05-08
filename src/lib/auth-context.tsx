@@ -29,6 +29,8 @@ type AuthState = {
   user: User | null;
   loading: boolean;
   signInGoogle: () => Promise<void>;
+  /** Explicit redirect-mode Google sign-in for users whose browsers block popups. */
+  signInGoogleRedirect: () => Promise<void>;
   startPhoneSignIn: (phone: string, recaptchaContainerId: string) => Promise<void>;
   verifyPhoneCode: (code: string) => Promise<void>;
   cancelPhoneSignIn: () => void;
@@ -93,34 +95,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signInGoogle = useCallback(async () => {
+  // Important: NOT async. We must call signInWithPopup synchronously inside
+  // the click event tick so the browser sees the popup as a real user-gesture
+  // navigation. Adding `await` (or any state update that yields a microtask)
+  // before the popup call causes Brave / strict Chrome / Safari to flag it as
+  // a "non-user-initiated" popup and block it (auth/popup-blocked).
+  const signInGoogle = useCallback((): Promise<void> => {
     setGoogleError(null);
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (e) {
-      const code = errorCode(e);
-      console.error("[auth] signInWithPopup failed:", code, e);
-      if (
-        code === "popup-blocked" ||
-        code === "popup-closed-by-user" ||
-        code === "cancelled-popup-request" ||
-        code === "operation-not-supported-in-this-environment"
-      ) {
-        // Browser killed the popup (in-app webview, strict popup blocker,
-        // third-party cookie blocking, etc.) — fall back to a full-page
-        // redirect, which always works.
-        try {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        } catch (e2) {
-          console.error("[auth] signInWithRedirect failed:", e2);
-          setGoogleError(humanFirebaseError(e2));
-          throw e2;
+    return signInWithPopup(auth, googleProvider)
+      .then(() => undefined)
+      .catch((e) => {
+        const code = errorCode(e);
+        console.error("[auth] signInWithPopup failed:", code, e);
+        if (
+          code === "popup-blocked" ||
+          code === "popup-closed-by-user" ||
+          code === "cancelled-popup-request" ||
+          code === "operation-not-supported-in-this-environment"
+        ) {
+          // Popup was killed by the browser. We're still inside the user-
+          // gesture window of the original click, so a redirect is allowed.
+          return signInWithRedirect(auth, googleProvider).catch((e2) => {
+            console.error("[auth] signInWithRedirect failed:", e2);
+            setGoogleError(humanFirebaseError(e2));
+            throw e2;
+          });
         }
-      }
+        setGoogleError(humanFirebaseError(e));
+        throw e;
+      });
+  }, []);
+
+  // Explicit full-page redirect path. Use this from a "popups are blocked,
+  // try the deterministic flow" CTA so users with locked-down browsers can
+  // still sign in.
+  const signInGoogleRedirect = useCallback((): Promise<void> => {
+    setGoogleError(null);
+    return signInWithRedirect(auth, googleProvider).catch((e) => {
+      console.error("[auth] signInWithRedirect failed:", e);
       setGoogleError(humanFirebaseError(e));
       throw e;
-    }
+    });
   }, []);
 
   const startPhoneSignIn = useCallback(
@@ -186,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       signInGoogle,
+      signInGoogleRedirect,
       startPhoneSignIn,
       verifyPhoneCode,
       cancelPhoneSignIn,
@@ -194,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phoneError,
       googleError,
     }),
-    [user, loading, signInGoogle, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, signOut, phoneStage, phoneError, googleError]
+    [user, loading, signInGoogle, signInGoogleRedirect, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, signOut, phoneStage, phoneError, googleError]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -255,7 +271,7 @@ function humanFirebaseError(e: unknown): string {
       "code-expired": "Code expired. Request a new one.",
       "too-many-requests": "Too many attempts — wait a minute and try again.",
       "popup-closed-by-user": "Sign-in cancelled.",
-      "popup-blocked": "Your browser blocked the sign-in popup.",
+      "popup-blocked": "Your browser blocked the sign-in popup. Use the redirect button below, or allow popups for this site.",
       "operation-not-allowed": "This sign-in method isn't enabled in Firebase yet.",
       "network-request-failed": "Network error. Check your connection.",
     }[code] ?? `Sign-in failed (${code}).`

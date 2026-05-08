@@ -17,7 +17,7 @@ export default function LoginPage() {
 }
 
 function LoginInner() {
-  const { user, loading, signInGoogle, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, phoneStage, phoneError, googleError } = useAuth();
+  const { user, loading, signInGoogle, signInGoogleRedirect, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, phoneStage, phoneError, googleError } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/app";
@@ -32,14 +32,25 @@ function LoginInner() {
   const [working, setWorking] = useState(false);
   const recaptchaIdRef = useRef("login-recaptcha");
 
-  async function handleGoogle() {
+  function handleGoogle() {
+    // Synchronous! signInGoogle() must invoke window.open within the same
+    // tick as this click event or browsers treat the popup as not user-
+    // initiated and block it.
     setWorking(true);
-    try {
-      await signInGoogle();
-    } finally {
-      setWorking(false);
-    }
+    signInGoogle().finally(() => setWorking(false));
   }
+
+  function handleGoogleRedirect() {
+    setWorking(true);
+    signInGoogleRedirect().finally(() => setWorking(false));
+  }
+
+  // Show the redirect fallback button as soon as the popup gets blocked
+  // OR the user has previously hit a popup error this session.
+  const popupBlocked =
+    !!googleError &&
+    (googleError.toLowerCase().includes("popup") ||
+      googleError.toLowerCase().includes("blocked"));
 
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -151,9 +162,21 @@ function LoginInner() {
             </button>
 
             {googleError && (
-              <p className="mt-3 rounded-xl border border-coral/40 bg-coral/10 px-3 py-2 text-xs text-coral">
-                {googleError}
-              </p>
+              <div className="mt-3 space-y-3">
+                <p className="rounded-xl border border-coral/40 bg-coral/10 px-3 py-2 text-xs text-coral">
+                  {googleError}
+                </p>
+
+                {popupBlocked && (
+                  <button
+                    onClick={handleGoogleRedirect}
+                    disabled={working}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-ink px-5 py-3.5 font-display text-sm font-semibold text-cream transition hover:bg-ink-soft disabled:opacity-60"
+                  >
+                    Continue with Google (full-page redirect)
+                  </button>
+                )}
+              </div>
             )}
 
             <div className="my-6 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted">
