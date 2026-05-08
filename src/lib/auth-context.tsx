@@ -12,6 +12,8 @@ import {
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as fbSignOut,
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -54,8 +56,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsub;
   }, []);
 
+  // Resolve the redirect leg of the Google flow. If the previous popup attempt
+  // was blocked we fell back to signInWithRedirect; on the return navigation
+  // this picks up the credential so onAuthStateChanged fires.
+  useEffect(() => {
+    getRedirectResult(auth).catch(() => {});
+  }, []);
+
   const signInGoogle = useCallback(async () => {
-    await signInWithPopup(auth, googleProvider);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (e) {
+      const code = errorCode(e);
+      if (
+        code === "popup-blocked" ||
+        code === "popup-closed-by-user" ||
+        code === "cancelled-popup-request" ||
+        code === "operation-not-supported-in-this-environment"
+      ) {
+        // Browser killed the popup (in-app webview, strict popup blocker,
+        // third-party cookie blocking, etc.) — fall back to a full-page
+        // redirect, which always works.
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
+      throw e;
+    }
   }, []);
 
   const startPhoneSignIn = useCallback(
@@ -172,12 +198,16 @@ async function ensureUserDoc(u: User) {
   }
 }
 
+function errorCode(e: unknown): string | null {
+  const msg = e instanceof Error ? e.message : String(e);
+  const m = /\(auth\/([^)]+)\)/.exec(msg);
+  return m ? m[1] : null;
+}
+
 function humanFirebaseError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
-  // Firebase exceptions look like "Firebase: Error (auth/invalid-verification-code)."
-  const m = /\(auth\/([^)]+)\)/.exec(msg);
-  if (!m) return msg;
-  const code = m[1];
+  const code = errorCode(e);
+  if (!code) return msg;
   return (
     {
       "invalid-phone-number": "That doesn't look like a valid phone number.",
