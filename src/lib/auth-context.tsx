@@ -10,7 +10,9 @@ import {
   type ReactNode,
 } from "react";
 import {
+  browserLocalPersistence,
   onAuthStateChanged,
+  setPersistence,
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
@@ -34,6 +36,8 @@ type AuthState = {
   /** True after a phone signInWithPhoneNumber call resolves; ready for code entry. */
   phoneStage: "idle" | "code-sent" | "verifying";
   phoneError: string | null;
+  /** Surfaces Google sign-in errors so the login screen can show them. */
+  googleError: string | null;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -45,29 +49,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [recaptcha, setRecaptcha] = useState<RecaptchaVerifier | null>(null);
   const [phoneStage, setPhoneStage] = useState<AuthState["phoneStage"]>("idle");
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
-  // Subscribe to auth state once. Triggers on initial load, sign-in, sign-out.
+  // Boot sequence:
+  //   1. Force browserLocalPersistence so the IDP token survives reloads /
+  //      the redirect bounce. (default in browsers, but explicit avoids
+  //      surprises in private mode).
+  //   2. Resolve any pending signInWithRedirect leg BEFORE we attach the
+  //      auth-state listener, so the listener's first fire reflects the
+  //      post-redirect user (not the empty pre-redirect state).
+  //   3. Attach the listener.
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      setLoading(false);
-      if (u) await ensureUserDoc(u);
-    });
-    return unsub;
-  }, []);
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
 
-  // Resolve the redirect leg of the Google flow. If the previous popup attempt
-  // was blocked we fell back to signInWithRedirect; on the return navigation
-  // this picks up the credential so onAuthStateChanged fires.
-  useEffect(() => {
-    getRedirectResult(auth).catch(() => {});
+    (async () => {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (err) {
+        console.warn("[auth] setPersistence failed:", err);
+      }
+
+      try {
+        const cred = await getRedirectResult(auth);
+        if (cred?.user) console.info("[auth] redirect resolved:", cred.user.uid);
+      } catch (err) {
+        const msg = humanFirebaseError(err);
+        console.error("[auth] getRedirectResult error:", err);
+        setGoogleError(msg);
+      }
+
+      if (cancelled) return;
+      unsub = onAuthStateChanged(auth, async (u) => {
+        setUser(u);
+        setLoading(false);
+        if (u) await ensureUserDoc(u);
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
   }, []);
 
   const signInGoogle = useCallback(async () => {
+    setGoogleError(null);
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (e) {
       const code = errorCode(e);
+      console.error("[auth] signInWithPopup failed:", code, e);
       if (
         code === "popup-blocked" ||
         code === "popup-closed-by-user" ||
@@ -77,9 +109,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Browser killed the popup (in-app webview, strict popup blocker,
         // third-party cookie blocking, etc.) — fall back to a full-page
         // redirect, which always works.
-        await signInWithRedirect(auth, googleProvider);
-        return;
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (e2) {
+          console.error("[auth] signInWithRedirect failed:", e2);
+          setGoogleError(humanFirebaseError(e2));
+          throw e2;
+        }
       }
+      setGoogleError(humanFirebaseError(e));
       throw e;
     }
   }, []);
@@ -153,8 +192,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       phoneStage,
       phoneError,
+      googleError,
     }),
-    [user, loading, signInGoogle, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, signOut, phoneStage, phoneError]
+    [user, loading, signInGoogle, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, signOut, phoneStage, phoneError, googleError]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

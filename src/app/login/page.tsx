@@ -17,7 +17,7 @@ export default function LoginPage() {
 }
 
 function LoginInner() {
-  const { user, loading, signInGoogle, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, phoneStage, phoneError } = useAuth();
+  const { user, loading, signInGoogle, startPhoneSignIn, verifyPhoneCode, cancelPhoneSignIn, phoneStage, phoneError, googleError } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/app";
@@ -149,6 +149,12 @@ function LoginInner() {
               <GoogleMark />
               Continue with Google
             </button>
+
+            {googleError && (
+              <p className="mt-3 rounded-xl border border-coral/40 bg-coral/10 px-3 py-2 text-xs text-coral">
+                {googleError}
+              </p>
+            )}
 
             <div className="my-6 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.24em] text-ink-muted">
               <span className="h-px flex-1 bg-line" />
